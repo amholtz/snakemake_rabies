@@ -1,0 +1,36 @@
+To log on to
+
+#####Singularity is still not working on your local system. Ask Frederic or Luc how they installed singularity on their macs
+#Singularity does work though on the cluster
+#The snakefile also worked when ran without singularity. This means though that you need to have the software installed on your locally system (i.e. Python3)
+
+#Instructions for logging on to the cluster:
+-Open Terminal
+-Enter cluster
+$ ssh aholtz@ssh.pasteur.fr
+-Enter your password
+-Enter Tars
+$ ssh aholtz@tars.pasteur.fr
+-Enter your password again
+-Check your @home
+$ ls
+-Check your working directory
+$ pwd
+-Enter your cd
+$ cd /pasteur/homes/aholtz/rabies/snakemake
+
+
+
+##You must do both of these everytime you want to run snakefile on the cluster
+
+You need to cd into the snakemake folder:
+cd /pasteur/homes/aholtz/rabies/snakemake
+
+#This activates snakemake on the cluster
+source /local/gensoft2/exe/conda/3.19.0/conda/bin/activate snakemake
+
+#This loads singularity on the cluster
+module load singularity/3.5.3
+
+#This runs snakefile on the cluster
+snakemake --snakefile snakemake_practice --config folder='/pasteur/homes/aholtz/rabies/' --keep-going --cores 1 --use-singularity --singularity-prefix $HOME/.singularity --singularity-args "-B /pasteur" --cluster "sbatch -c {threads} -o logs/{params.name}.log -e logs/{params.name}.log --mem {params.mem}  -p common --qos={params.qos} -J {params.name}" --jobs 300

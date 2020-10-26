@@ -1,0 +1,68 @@
+import os
+
+# To run locally:
+# snakemake --snakefile snakefile_practice --keep-going --cores 4 --config folder=.. --use-singularity --singularity-prefix ~/.singularity --singularity-args "--home ~"
+
+# To visualise the pipeline
+# snakemake --snakefile Snakefile_combined_MSA --config folder=.. --dag | dot -Tsvg > pipeline_combined_MSA.svg
+
+#Not sure what this does
+localrules: all
+
+
+folder = os.path.abspath(config["folder"])
+data_dir = os.path.join(folder, 'data')
+genbank_data = os.path.join(data_dir, 'ncbi_RABV_11500_12000.fasta')
+genbank_meta = os.path.join(data_dir, 'ncbi_cleaned.tab')
+
+#Not sure what this does
+os.makedirs('logs', exist_ok=True)
+
+rule all:
+    input:
+        #os.path.join(data_dir, 'aln.fa'),
+        #os.path.join(data_dir, 'ncbi_cleaned.tab'),
+        os.path.join(data_dir, 'ids.txt'),
+        os.path.join(data_dir, 'ncbi_RABV_11500_12000_cleaned.fasta'),
+
+rule get_seq_ids:
+    '''
+    Extract sequence ids of interest.
+    '''
+    input:
+        tab = os.path.join(data_dir, 'ncbi_cleaned.tab'),
+    output:
+        tab = os.path.join(data_dir, 'ids.txt')
+    params:
+        mem = 500,
+        name = 'ids',
+        qos = 'fast'
+    threads: 1
+    singularity: "docker://evolbioinfo/python-evol:v3.6richer"
+    shell:
+        """
+        python py/get_seq_ids.py --input_data {input.tab} --output_data {output.tab}
+        """
+
+rule remove_seq:
+    '''
+    Removes sequences from fasta file that are not in the metadata table
+    '''
+    input:
+        seq = os.path.join(data_dir, 'ncbi_cleaned.tab'),
+        meta = os.path.join(data_dir, 'ncbi_RABV_11500_12000.fasta'),
+        script = os.path.join(folder, 'snakemake/r/remove_sequences.R')
+    output:
+        fasta = os.path.join(data_dir, 'ncbi_RABV_11500_12000_cleaned.fasta')
+    params:
+        mem = 500,
+        name = 'ids',
+        qos = 'fast'
+    threads: 1
+    shell:
+        """
+        Rscript --vanilla {input.script}\
+        --fasta {input.seq}\
+        --meta {input.meta}\
+        --output_fasta {output.fasta}
+        """

@@ -24,6 +24,10 @@ rule all:
         #os.path.join(data_dir, 'ncbi_cleaned.tab'),
         os.path.join(data_dir, 'ids.txt'),
         os.path.join(data_dir, 'ncbi_RABV_11500_12000_cleaned.fasta'),
+        os.path.join(data_dir, 'length.png'),
+        os.path.join(data_dir, 'country.png'),
+        os.path.join(data_dir, 'host.png'),
+        os.path.join(data_dir, 'year.png'),
 
 rule get_seq_ids:
     '''
@@ -59,6 +63,7 @@ rule remove_seq:
         name = 'ids',
         qos = 'fast'
     threads: 1
+    singularity: "docker://evolbioinfo/r-evol:v3.4.3_1"
     shell:
         """
         Rscript --vanilla {input.script}\
@@ -66,3 +71,27 @@ rule remove_seq:
         --meta {input.meta}\
         --output_fasta {output.fasta}
         """
+
+rule data_visualize:
+    '''
+    Creates some plots to visualize genome origin, length, and date
+    '''
+    input:
+       tab = os.path.join(data_dir, 'ncbi_cleaned.tab'),
+    output:
+       length = os.path.join(data_dir, 'length.png'),
+       country = os.path.join(data_dir, 'country.png'),
+       host = os.path.join(data_dir, 'host.png'),
+       year = os.path.join(data_dir, 'year.png'),
+    params:
+        mem = 500,
+        name = 'ids',
+        qos = 'fast'
+    threads: 1
+    singularity: "docker://evolbioinfo/python-evol:v3.6richer"
+    shell:
+        """
+        python3 py/data_visualizations.py --input_data {input.tab} --output_length {output.length} \
+        --output_country {output.country} --output_host {output.host} --output_year {output.year}
+        """
+

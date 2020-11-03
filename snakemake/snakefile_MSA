@@ -1,10 +1,10 @@
 import os
 
 # To run locally:
-# snakemake --snakefile snakefile_practice --keep-going --cores 4 --config folder=.. --use-singularity --singularity-prefix ~/.singularity --singularity-args "--home ~"
+# snakemake --snakefile snakefile_MSA --keep-going --cores 4 --config folder=.. --use-singularity --singularity-prefix ~/.singularity --singularity-args "--home ~"
 
 # To visualise the pipeline
-# snakemake --snakefile Snakefile_combined_MSA --config folder=.. --dag | dot -Tsvg > pipeline_combined_MSA.svg
+# snakemake --snakefile snakefile_MSA --config folder=.. --dag | dot -Tsvg > pipeline_combined_MSA.svg
 
 #Not sure what this does
 localrules: all

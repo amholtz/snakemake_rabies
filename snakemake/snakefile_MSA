@@ -1,0 +1,141 @@
+import os
+
+# To run locally:
+# snakemake --snakefile snakefile_practice --keep-going --cores 4 --config folder=.. --use-singularity --singularity-prefix ~/.singularity --singularity-args "--home ~"
+
+# To visualise the pipeline
+# snakemake --snakefile Snakefile_combined_MSA --config folder=.. --dag | dot -Tsvg > pipeline_combined_MSA.svg
+
+#Not sure what this does
+localrules: all
+
+
+folder = os.path.abspath(config["folder"])
+data_dir = os.path.join(folder, 'data')
+genbank_data = os.path.join(data_dir, 'ncbi_RABV_11500_12000.fasta')
+genbank_meta = os.path.join(data_dir, 'ncbi_cleaned.tab')
+
+#Not sure what this does
+os.makedirs('logs', exist_ok=True)
+
+rule all:
+    input:
+        #os.path.join(data_dir, 'aln.fa'),
+        #os.path.join(data_dir, 'ncbi_cleaned.tab'),
+        os.path.join(data_dir, 'ids.txt'),
+        os.path.join(data_dir, 'ncbi_RABV_11500_12000_cleaned.fasta'),
+        os.path.join(data_dir, 'length.png'),
+        os.path.join(data_dir, 'country.png'),
+        os.path.join(data_dir, 'host.png'),
+        os.path.join(data_dir, 'year.png'),
+        os.path.join(data_dir, 'aln.ref.fa'),
+        os.path.join(data_dir, 'aln.fa'),
+
+
+rule get_seq_ids:
+    '''
+    Extract sequence ids of interest.
+    '''
+    input:
+        tab = os.path.join(data_dir, 'ncbi_cleaned.tab'),
+    output:
+        tab = os.path.join(data_dir, 'ids.txt')
+    params:
+        mem = 500,
+        name = 'ids',
+        qos = 'fast'
+    threads: 1
+    singularity: "docker://evolbioinfo/python-evol:v3.6richer"
+    shell:
+        """
+        python py/get_seq_ids.py --input_data {input.tab} --output_data {output.tab}
+        """
+
+rule remove_seq:
+    '''
+    Removes sequences from fasta file that are not in the metadata table
+    '''
+    input:
+        seq = os.path.join(data_dir, 'ncbi_cleaned.tab'),
+        meta = os.path.join(data_dir, 'ncbi_RABV_11500_12000.fasta'),
+        script = os.path.join(folder, 'snakemake/r/remove_sequences.R')
+    output:
+        fasta = os.path.join(data_dir, 'ncbi_RABV_11500_12000_cleaned.fasta')
+    params:
+        mem = 500,
+        name = 'ids',
+        qos = 'fast'
+    threads: 1
+    singularity: "docker://evolbioinfo/r-evol:v3.4.3_1"
+    shell:
+        """
+        Rscript --vanilla {input.script}\
+        --fasta {input.seq}\
+        --meta {input.meta}\
+        --output_fasta {output.fasta}
+        """
+
+rule data_visualize:
+    '''
+    Creates some plots to visualize genome origin, length, and date
+    '''
+    input:
+       tab = os.path.join(data_dir, 'ncbi_cleaned.tab'),
+    output:
+       length = os.path.join(data_dir, 'length.png'),
+       country = os.path.join(data_dir, 'country.png'),
+       host = os.path.join(data_dir, 'host.png'),
+       year = os.path.join(data_dir, 'year.png'),
+    params:
+        mem = 500,
+        name = 'ids',
+        qos = 'fast'
+    threads: 1
+    singularity: "docker://evolbioinfo/python-evol:v3.6richer"
+    shell:
+        """
+        python3 py/data_visualizations.py --input_data {input.tab} --output_length {output.length} \
+        --output_country {output.country} --output_host {output.host} --output_year {output.year}
+        """
+
+
+rule aln_against_reference:
+    '''
+    Align sequences against a reference.
+    '''
+    input:
+        fa = os.path.join(data_dir, 'ncbi_RABV_11500_12000_cleaned.fasta'),
+        ref = os.path.join(data_dir, 'rabv_reference_1988.fasta')
+    output:
+        aln = os.path.join(data_dir, 'aln.ref.fa')
+    params:
+        mem = 1000,
+        name = 'aln',
+        qos = 'fast'
+    threads: 12
+    singularity: "docker://evolbioinfo/mafft:v7.313"
+    shell:
+        """
+        mafft --thread {threads} --memsave --retree 1 --maxiterate 0 --add {input.fa} \
+        --keeplength {input.ref} > {output.aln}
+        """
+
+rule remove_ref:
+    '''
+    Removes the reference from the alignment.
+    '''
+    input:
+        aln = os.path.join(data_dir, 'aln.ref.fa'),
+        ids = os.path.join(data_dir, 'ids.txt')
+    output:
+        aln = os.path.join(data_dir, 'aln.fa')
+    params:
+        mem = 1000,
+        name = 'rmref',
+        qos = 'fast',
+    threads: 1
+    singularity: "docker://evolbioinfo/goalign:v0.3.1"
+    shell:
+        """
+        goalign subset -i {input.aln} -f {input.ids} -o {output.aln}
+        """

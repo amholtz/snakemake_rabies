@@ -19,8 +19,12 @@ os.makedirs('logs', exist_ok=True)
 
 rule all:
     input:
+        os.path.join(data_dir, 'iq_tree.nwk'),
+        os.path.join(data_dir, 'raxmlng_tree.nwk'),
+        os.path.join(data_dir, 'loglikelihoods.log'),
+        os.path.join(data_dir, 'best_tree.nwk'),
+        os.path.join(data_dir, 'aln.length'),
         os.path.join(data_dir, 'best_tree.RABV.collapsed.nwk'),
-
 
 rule raxml_nt:
     '''
@@ -45,10 +49,9 @@ rule raxml_nt:
         mv {input.aln}.raxml.bestTree {output.tree}
         mv {input.aln}.raxml.log {output.log}
         mv {input.aln}.raxml.bestModel {output.model}
-        rm -rf {input.aln}*
         """
 
-    rule iqtree_nt:
+rule iqtree_nt:
     '''
     Reconstructs a tree with IQTREE.
     '''
@@ -62,14 +65,12 @@ rule raxml_nt:
     singularity: "docker://evolbioinfo/iqtree:v2.0-rc1"
     params:
         mem = 10000,
-        name = 'iq.{type}',
     shell:
         """
         iqtree -s {input.aln} -st DNA -nt {threads} -alrt 0 -m GTR+FO+I+G6 -spp {input.part} --runs 1
         mv {input.part}.treefile {output.tree}
         sed -i -e 's/\\///g' {output.tree}
         mv {input.part}.iqtree {output.log}
-        rm -rf {input.part}.*
         """
 
 rule log_lh:
@@ -95,7 +96,6 @@ rule log_lh:
             iqtree -s {input.aln} -st DNA -nt {threads} -m GTR+FO+I+G6 -spp {input.part}.iq.$name --show-lh -te $t
             l=`(grep -e 'Log-likelihood of the tree: .* (s.e.' {input.part}.iq.${{name}}.iqtree | sed -e "s/Log-likelihood of the tree: //g" | sed -e "s/ (s.e. .*)//g")`
             echo "$name  $l">> {output.log}
-            rm -rf {input.part}.iq.${{name}}*
         done
         """
 
@@ -161,4 +161,3 @@ rule collapse_non_informative_branches:
 
         python3 py/collapse.py --input_tree {input.tree} --output_tree {output.tree} --threshold $l --feature dist
         """
-

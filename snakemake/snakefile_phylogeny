@@ -42,6 +42,7 @@ rule raxml_nt:
     params:
         mem = 10000,
         name = 'raxml',
+        qos = 'normal',
     shell:
         """
         raxml-ng --model {input.part} --msa {input.aln} --msa-format FASTA --data-type DNA --tree pars{{5}} \
@@ -65,6 +66,8 @@ rule iqtree_nt:
     singularity: "docker://evolbioinfo/iqtree:v2.0-rc1"
     params:
         mem = 10000,
+        name = 'iqtree',
+        qos = 'normal',
     shell:
         """
         iqtree -s {input.aln} -st DNA -nt {threads} -alrt 0 -m GTR+FO+I+G6 -spp {input.part} --runs 1
@@ -88,6 +91,7 @@ rule log_lh:
     params:
         mem = 60000,
         name = 'lh_iqtree',
+        qos = 'normal',
     shell:
         """
         for t in `(ls {input.trees})`; do
@@ -113,6 +117,7 @@ rule best_tree:
     params:
         mem = 10000,
         name = 'best_tree',
+        qos = 'normal',
     shell:
         """
         python3 py/best_tree.py --log {input.log} --trees {input.trees} --best_tree {output.tree}
@@ -131,7 +136,7 @@ rule aln_length:
     params:
         mem = 2000,
         name = 'aln_len',
-        qos = 'fast'
+        qos = 'normal',
     threads: 1
     shell:
         """
@@ -151,7 +156,7 @@ rule collapse_non_informative_branches:
     params:
         mem = 2000,
         name = 'collapse',
-        qos = 'fast',
+        qos = 'normal',
     threads: 1
     singularity: "docker://evolbioinfo/python-evol:v3.6richer"
     shell:

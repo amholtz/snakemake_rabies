@@ -21,6 +21,7 @@ rule all:
         os.path.join(data_dir, 'raxmlng_tree.ntips'),
         os.path.join(data_dir, 'iq_tree.root.lsd2.nexus'),
         os.path.join(data_dir, 'raxmlng_tree.root.lsd2.nexus'),
+        os.path.join(data_dir, 'iTOL_colorstrip-species.txt'),
 
 rule extract_dates_lsd:
     '''
@@ -161,4 +162,25 @@ rule raxmlng_date_lsd2:
 
         echo `grep "], tMRCA" {output.log} | sed -e 's/rate [0-9\\.e+-]\\+ \\[[0-9\\.e+-]\\+; [0-9\\.e+-]\\+\\], tMRCA //g' \
         | sed -e 's/ \\[[0-9\\.e+-]\\+; [0-9\\.e+-]\\+\\], objective function [0-9\\.e+-]\\+//g'` > {output.rd}
+        """
+rule itol_annotations:
+    '''
+    Converts a tab-separated table into iTOL annotations.
+    '''
+    input:
+        species = os.path.join(data_dir, 'ncbi_cleaned.tab'),
+    output:
+        species = os.path.join(data_dir, 'iTOL_colorstrip-species.txt'),
+    singularity:
+        "docker://evolbioinfo/table2itol"
+    params:
+        mem = 2000,
+        name = 'table2itol',
+        qos = 'fast',
+        path = data_dir
+    threads: 1
+    shell:
+        """
+        mkdir -p {params.path}
+        table2itol.R -i id -D {params.path} {input.species}
         """

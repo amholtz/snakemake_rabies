@@ -53,8 +53,6 @@ The phylogeny reconstruction pipeline [snakefile_phylogeny](snakemake/snakefile_
 ```bash
 snakemake --snakefile snakefile_phylogeny --keep-going --config folder=.. --use-singularity -singularity-args "--home ~"
 ```
-![phylogeny reconstruction pipeline](snakemake/pipeline_phylogeny.svg)
-
 ### 3. Phylogeography
 The phylogeny was dated and rooted with LSD 2 [To *et al.*, 2015](https://academic.oup.com/sysbio/article/65/1/82/2461506) (with temporal outlier removal).
 The rootings were reviewed and any clade formations were observed against country of origin and virus host species.
@@ -68,4 +66,3 @@ To perform phylogeographic analysis, from the [snakemake](snakemake)folder, run 
 ```bash
 snakemake --snakefile snakefile_phylogeography --keep-going --config folder=.. --use-singularity --singularity-args "--home ~"
 ```
-![Phylogeographic pipeline](snakemake/pipeline_phylogeography.svg)

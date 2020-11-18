@@ -10,10 +10,10 @@ if '__main__' == __name__:
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--input_tree', default=, type=str) # you need to put the path to your own tree for input and output
-    parser.add_argument('--output_bats', default="/Volumes/@home/rabies/data/bats_split.txt", required=True, type=str)
-    parser.add_argument('--output_skunks', default="/Volumes/@home/rabies/data/skunks_split.txt", required = True, type = str)
-    parser.add_argument('--output_dogs', default="/Volumes/@home/rabies/data/dogs_split.txt", required = True, type = str)
+    parser.add_argument('--input_tree',  required=True, type=str)
+    parser.add_argument('--output_bats',  required=True, type=str)
+    parser.add_argument('--output_skunks',  required=True, type=str)
+    parser.add_argument('--output_dogs',  required=True, type=str)
     params = parser.parse_args()
 
     tree = read_tree(params.input_tree)

@@ -1,0 +1,218 @@
+import os
+
+# To run locally:
+# snakemake --snakefile snakefile_phylogeny --keep-going --cores 4 --config folder=.. --use-singularity --singularity-prefix ~/.singularity --singularity-args "--home ~"
+
+# To visualise the pipeline
+# snakemake --snakefile snakefile_phylogeny --config folder=.. --dag | dot -Tsvg > pipeline_combined_MSA.svg
+
+#Not sure what this does
+localrules: all
+
+
+folder = os.path.abspath(config["folder"])
+data_dir = os.path.join(folder, 'data')
+tree_types = ['raxmlng', 'iq']
+
+#Not sure what this does
+os.makedirs('logs', exist_ok=True)
+
+rule all:
+    input:
+        os.path.join(data_dir, 'iq_tree_bats.nwk'),
+        os.path.join(data_dir, 'iq_tree_skunks.nwk'),
+        os.path.join(data_dir, 'iq_tree_dogs.nwk'),
+        os.path.join(data_dir, 'raxmlng_tree_bats.nwk'),
+        os.path.join(data_dir, 'raxmlng_tree_skunks.nwk'),
+        os.path.join(data_dir, 'raxmlng_tree_dogs.nwk'),
+        #os.path.join(data_dir, 'loglikelihoods_bats.log'),
+        #os.path.join(data_dir, 'loglikelihoods_skunks.log'),
+        #os.path.join(data_dir, 'loglikelihoods_dogs.log'),
+        #os.path.join(data_dir, 'best_tree_bats.nwk'),
+        #os.path.join(data_dir, 'best_tree_skunks.nwk'),
+        #os.path.join(data_dir, 'best_tree_dogs.nwk'),
+        #os.path.join(data_dir, 'aln_bats.length'),
+        #os.path.join(data_dir, 'aln_skunks.length'),
+        #os.path.join(data_dir, 'aln_dogs.length'),
+        #os.path.join(data_dir, 'best_tree.RABV.collapsed_bats.nwk'),
+        #os.path.join(data_dir, 'best_tree.RABV.collapsed_skunks.nwk'),
+        #os.path.join(data_dir, 'best_tree.RABV.collapsed_dogs.nwk'),
+
+rule raxml_nt:
+    '''
+    Reconstructs a tree with RAxML.
+    '''
+    input:
+        bats = os.path.join(data_dir, 'bats.fa'),
+        skunks = os.path.join(data_dir, 'skunks.fa'),
+        dogs = os.path.join(data_dir, 'dogs.fa'),
+        part = os.path.join(data_dir, 'partition_raxml.txt'),
+    output:
+        tree_bats = os.path.join(data_dir, 'raxmlng_tree_bats.nwk'),
+        log_bats = os.path.join(data_dir, 'raxmlng_tree_bats.log'),
+        model_bats = os.path.join(data_dir, 'raxmlng_tree_bats.model'),
+        tree_skunks = os.path.join(data_dir, 'raxmlng_tree_skunks.nwk'),
+        log_skunks = os.path.join(data_dir, 'raxmlng_tree_skunks.log'),
+        model_skunks = os.path.join(data_dir, 'raxmlng_tree_skunks.model'),
+        tree_dogs = os.path.join(data_dir, 'raxmlng_tree_dogs.nwk'),
+        log_dogs = os.path.join(data_dir, 'raxmlng_tree_dogs.log'),
+        model_dogs = os.path.join(data_dir, 'raxmlng_tree_dogs.model'),
+        
+    threads: 12
+    singularity: "docker://evolbioinfo/raxml-ng:v0.9.0"
+    params:
+        mem = 10000,
+        name = 'raxml',
+        qos = 'normal',
+    shell:
+        """
+        raxml-ng --model {input.part} --msa {input.bats} --msa-format FASTA --data-type DNA --tree pars{{5}} \
+        --seed 239 --threads {threads} --force
+        mv {input.bats}.raxml.bestTree {output.tree_bats}
+        mv {input.bats}.raxml.log {output.log_bats}
+        mv {input.bats}.raxml.bestModel {output.model_bats}
+        
+        raxml-ng --model {input.part} --msa {input.skunks} --msa-format FASTA --data-type DNA --tree pars{{5}} \
+        --seed 239 --threads {threads} --force
+        mv {input.skunks}.raxml.bestTree {output.tree_skunks}
+        mv {input.skunks}.raxml.log {output.log_skunks}
+        mv {input.skunks}.raxml.bestModel {output.model_skunks}
+        
+        raxml-ng --model {input.part} --msa {input.dogs} --msa-format FASTA --data-type DNA --tree pars{{5}} \
+        --seed 239 --threads {threads} --force
+        mv {input.dogs}.raxml.bestTree {output.tree_dogs}
+        mv {input.dogs}.raxml.log {output.log_dogs}
+        mv {input.dogs}.raxml.bestModel {output.model_dogs}
+        """
+
+rule iqtree_nt:
+    '''
+    Reconstructs a tree with IQTREE.
+    '''
+    input:
+        bats = os.path.join(data_dir, 'bats.fa'),
+        skunks = os.path.join(data_dir, 'skunks.fa'),
+        dogs = os.path.join(data_dir, 'dogs.fa'),
+        part = os.path.join(data_dir, 'partition_iq.txt'),
+    output:
+        tree_bats = os.path.join(data_dir, 'iq_tree_bats.nwk'),
+        log_bats = os.path.join(data_dir, 'iq_tree_bats.log'),
+        tree_skunks = os.path.join(data_dir, 'iq_tree_skunks.nwk'),
+        log_skunks = os.path.join(data_dir, 'iq_tree_skunks.log'),
+        tree_dogs = os.path.join(data_dir, 'iq_tree_dogs.nwk'),
+        log_dogs = os.path.join(data_dir, 'iq_tree_dogs.log'),
+
+    threads: 12
+    singularity: "docker://evolbioinfo/iqtree:v2.0-rc1"
+    params:
+        mem = 10000,
+        name = 'iqtree',
+        qos = 'normal',
+    shell:
+        """
+        iqtree -s {input.bats} -st DNA -nt {threads} -alrt 0 -m GTR+FO+I+G6 -spp {input.part} --runs 1
+        mv {input.part}.treefile {output.tree_bats}
+        sed -i -e 's/\\///g' {output.tree_bats}
+        mv {input.part}.iqtree {output.log_bats}
+
+        iqtree -s {input.skunks} -st DNA -nt {threads} -alrt 0 -m GTR+FO+I+G6 -spp {input.part} --runs 1
+        mv {input.part}.treefile {output.tree_skunks}
+        sed -i -e 's/\\///g' {output.tree_skunks}
+        mv {input.part}.iqtree {output.log_skunks}
+
+        iqtree -s {input.dogs} -st DNA -nt {threads} -alrt 0 -m GTR+FO+I+G6 -spp {input.part} --runs 1
+        mv {input.part}.treefile {output.tree_dogs}
+        sed -i -e 's/\\///g' {output.tree_dogs}
+        mv {input.part}.iqtree {output.log_dogs}
+        """
+
+rule log_lh:
+    '''
+    Compares tree likelihoods.
+    '''
+    input:
+        aln = os.path.join(data_dir, 'aln.fa'),
+        trees = expand(os.path.join(data_dir, '{type}_tree.nwk'), type=tree_types),
+        part = os.path.join(data_dir, 'partition_iq.txt'),
+    output:
+        log = os.path.join(data_dir, 'loglikelihoods.log'),
+    threads: 12
+    singularity: "docker://evolbioinfo/iqtree:v2.0-rc1"
+    params:
+        mem = 60000,
+        name = 'lh_iqtree',
+        qos = 'normal',
+    shell:
+        """
+        for t in `(ls {input.trees})`; do
+            name=`(basename $t .nwk)`
+            cp {input.part} {input.part}.iq.$name
+            iqtree -s {input.aln} -st DNA -nt {threads} -m GTR+FO+I+G6 -spp {input.part}.iq.$name --show-lh -te $t
+            l=`(grep -e 'Log-likelihood of the tree: .* (s.e.' {input.part}.iq.${{name}}.iqtree | sed -e "s/Log-likelihood of the tree: //g" | sed -e "s/ (s.e. .*)//g")`
+            echo "$name  $l">> {output.log}
+        done
+        """
+
+rule best_tree:
+    '''
+    Gets the best tree in terms of likelihood.
+    '''
+    input:
+        log = os.path.join(data_dir, 'loglikelihoods.log'),
+        trees = expand(os.path.join(data_dir, '{type}_tree.nwk'), type=tree_types),
+    output:
+        tree = os.path.join(data_dir, 'best_tree.nwk'),
+    threads: 1
+    singularity: "docker://evolbioinfo/python-evol:v3.6"
+    params:
+        mem = 10000,
+        name = 'best_tree',
+        qos = 'normal',
+    shell:
+        """
+        python3 py/best_tree.py --log {input.log} --trees {input.trees} --best_tree {output.tree}
+        """
+
+rule aln_length:
+    '''
+    Calculates alignment length.
+    '''
+    input:
+        aln = os.path.join(data_dir, 'aln.fa'),
+    output:
+        length = os.path.join(data_dir, 'aln.length'),
+    singularity:
+        "docker://evolbioinfo/goalign:v0.3.1"
+    params:
+        mem = 2000,
+        name = 'aln_len',
+        qos = 'normal',
+    threads: 1
+    shell:
+        """
+        goalign stats length -i {input.aln} > {output.length}
+        """
+
+rule collapse_non_informative_branches:
+    '''
+    Collapse internal branches of length <= 1/2 mut/site, set external branches of length <= 1/2 mut/site to zero.
+    If the tree is rooted and a root child branch is to be collapsed, set it to zero instead (to keep the tree rooted).
+    '''
+    input:
+        tree = os.path.join(data_dir, 'best_tree.nwk'),
+        length =  os.path.join(data_dir, 'aln.length'),
+    output:
+        tree = os.path.join(data_dir, 'best_tree.RABV.collapsed.nwk'),
+    params:
+        mem = 2000,
+        name = 'collapse',
+        qos = 'normal',
+    threads: 1
+    singularity: "docker://evolbioinfo/python-evol:v3.6richer"
+    shell:
+        """
+        n=`head {input.length}`
+        l=`awk -v n="$n" 'BEGIN {{ m=1/n/2; print m}}'`
+
+        python3 py/collapse.py --input_tree {input.tree} --output_tree {output.tree} --threshold $l --feature dist
+        """

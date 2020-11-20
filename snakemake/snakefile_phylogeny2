@@ -13,6 +13,7 @@ localrules: all
 folder = os.path.abspath(config["folder"])
 data_dir = os.path.join(folder, 'data')
 tree_types = ['raxmlng', 'iq']
+types = ['raxmlng', 'iq']
 host = ['bats', 'skunks', 'dogs']
 
 #Not sure what this does
@@ -23,22 +24,17 @@ rule all:
         #os.path.join(data_dir, 'bats.fa'),
         #os.path.join(data_dir, 'skunks.fa'),
         #os.path.join(data_dir, 'dogs.fa'),
-        expand(os.path.join(data_dir, 'iqtree_{host}.nwk'), host=host),
+        #expand(os.path.join(data_dir, 'iq_tree_{host}.nwk'), host=host),
         #os.path.join(data_dir, 'raxmlng_tree_bats.nwk'),
         #os.path.join(data_dir, 'raxmlng_tree_skunks.nwk'),
         #os.path.join(data_dir, 'raxmlng_tree_dogs.nwk'),
         #os.path.join(data_dir, 'loglikelihoods_bats.log'),
         #os.path.join(data_dir, 'loglikelihoods_skunks.log'),
         #os.path.join(data_dir, 'loglikelihoods_dogs.log'),
-        #os.path.join(data_dir, 'best_tree_bats.nwk'),
-        #os.path.join(data_dir, 'best_tree_skunks.nwk'),
-        #os.path.join(data_dir, 'best_tree_dogs.nwk'),
-        #os.path.join(data_dir, 'aln_bats.length'),
-        #os.path.join(data_dir, 'aln_skunks.length'),
-        #os.path.join(data_dir, 'aln_dogs.length'),
-        #os.path.join(data_dir, 'best_tree.RABV.collapsed_bats.nwk'),
-        #os.path.join(data_dir, 'best_tree.RABV.collapsed_skunks.nwk'),
-        #os.path.join(data_dir, 'best_tree.RABV.collapsed_dogs.nwk'),
+        #os.path.join(data_dir, 'aln.length'),
+        expand(os.path.join(data_dir, '{host}.length'), host = host),
+        expand(os.path.join(data_dir, '{types}_tree_{host}.collapsed.nwk'), types = types, host=host),
+
 
 rule subset_align:
     '''
@@ -121,8 +117,8 @@ rule iqtree_nt:
         aln = os.path.join(data_dir, '{host}.fa'),
         part = os.path.join(data_dir, 'partition_iq.txt'),
     output:
-        tree = os.path.join(data_dir, 'iqtree_{host}.nwk'),
-        log = os.path.join(data_dir, 'iqtree_{host}.log'),
+        tree = os.path.join(data_dir, 'iq_tree_{host}.nwk'),
+        log = os.path.join(data_dir, 'iq_tree_{host}.log'),
     threads: 12
     singularity: "docker://evolbioinfo/iqtree:v2.0-rc1"
     params:
@@ -139,24 +135,83 @@ rule iqtree_nt:
         mv {input.part}_{wildcards.host}.iqtree {output.log}
         """
 
-rule log_lh:
+rule log_lh_bats:
     '''
     Compares tree likelihoods.
     '''
     input:
-        aln = os.path.join(data_dir, 'aln.fa'),
-        trees = expand(os.path.join(data_dir, '{type}_tree.nwk'), type=tree_types),
+        aln = os.path.join(data_dir, 'bats.fa'),
+        trees = expand(os.path.join(data_dir, '{type}_tree_bats.nwk'), type=tree_types),
         part = os.path.join(data_dir, 'partition_iq.txt'),
     output:
-        log = os.path.join(data_dir, 'loglikelihoods.log'),
+        log = os.path.join(data_dir, 'loglikelihoods_bats.log')
     threads: 12
     singularity: "docker://evolbioinfo/iqtree:v2.0-rc1"
     params:
         mem = 60000,
-        name = 'lh_iqtree',
+        name = 'lh_bats',
         qos = 'normal',
     shell:
         """
+        cp {input.part} {input.part}_bats
+
+        for t in `(ls {input.trees})`; do
+            name=`(basename $t .nwk)`
+            cp {input.part} {input.part}.iq.$name
+            iqtree -s {input.aln} -st DNA -nt {threads} -m GTR+FO+I+G6 -spp {input.part}.iq.$name --show-lh -te $t
+            l=`(grep -e 'Log-likelihood of the tree: .* (s.e.' {input.part}.iq.${{name}}.iqtree | sed -e "s/Log-likelihood of the tree: //g" | sed -e "s/ (s.e. .*)//g")`
+            echo "$name  $l">> {output.log}
+        done
+        """
+
+rule log_lh_skunks:
+    '''
+    Compares tree likelihoods.
+    '''
+    input:
+        aln = os.path.join(data_dir, 'skunks.fa'),
+        trees = expand(os.path.join(data_dir, '{type}_tree_skunks.nwk'), type=tree_types),
+        part = os.path.join(data_dir, 'partition_iq.txt'),
+    output:
+        log = os.path.join(data_dir, 'loglikelihoods_skunks.log')
+    threads: 12
+    singularity: "docker://evolbioinfo/iqtree:v2.0-rc1"
+    params:
+        mem = 60000,
+        name = 'lh_skunks',
+        qos = 'normal',
+    shell:
+        """
+        cp {input.part} {input.part}_skunks
+
+        for t in `(ls {input.trees})`; do
+            name=`(basename $t .nwk)`
+            cp {input.part} {input.part}.iq.$name
+            iqtree -s {input.aln} -st DNA -nt {threads} -m GTR+FO+I+G6 -spp {input.part}.iq.$name --show-lh -te $t
+            l=`(grep -e 'Log-likelihood of the tree: .* (s.e.' {input.part}.iq.${{name}}.iqtree | sed -e "s/Log-likelihood of the tree: //g" | sed -e "s/ (s.e. .*)//g")`
+            echo "$name  $l">> {output.log}
+        done
+        """
+rule log_lh_dogs:
+    '''
+    Compares tree likelihoods.
+    '''
+    input:
+        aln = os.path.join(data_dir, 'dogs.fa'),
+        trees = expand(os.path.join(data_dir, '{type}_tree_dogs.nwk'), type=tree_types),
+        part = os.path.join(data_dir, 'partition_iq.txt'),
+    output:
+        log = os.path.join(data_dir, 'loglikelihoods_dogs.log')
+    threads: 12
+    singularity: "docker://evolbioinfo/iqtree:v2.0-rc1"
+    params:
+        mem = 60000,
+        name = 'lh_dogs',
+        qos = 'normal',
+    shell:
+        """
+        cp {input.part} {input.part}_dogs
+
         for t in `(ls {input.trees})`; do
             name=`(basename $t .nwk)`
             cp {input.part} {input.part}.iq.$name
@@ -191,9 +246,9 @@ rule aln_length:
     Calculates alignment length.
     '''
     input:
-        aln = os.path.join(data_dir, 'aln.fa'),
+        aln = os.path.join(data_dir, '{host}.fa'),
     output:
-        length = os.path.join(data_dir, 'aln.length'),
+        length = os.path.join(data_dir, '{host}.length'),
     singularity:
         "docker://evolbioinfo/goalign:v0.3.1"
     params:
@@ -212,10 +267,10 @@ rule collapse_non_informative_branches:
     If the tree is rooted and a root child branch is to be collapsed, set it to zero instead (to keep the tree rooted).
     '''
     input:
-        tree = os.path.join(data_dir, 'best_tree.nwk'),
+        tree = os.path.join(data_dir, '{types}_tree_{host}.nwk'),
         length =  os.path.join(data_dir, 'aln.length'),
     output:
-        tree = os.path.join(data_dir, 'best_tree.RABV.collapsed.nwk'),
+        tree = os.path.join(data_dir, '{types}_tree_{host}.collapsed.nwk'),
     params:
         mem = 2000,
         name = 'collapse',

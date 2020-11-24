@@ -1,0 +1,126 @@
+import os
+
+# To run locally:
+# snakemake --snakefile snakefile_treetime --keep-going --cores 4 --config folder=.. --use-singularity --singularity-prefix ~/.singularity --singularity-args "--home ~"
+
+# To visualise the pipeline
+# snakemake --snakefile snakefile_treetime --config folder=.. --dag | dot -Tsvg > pipeline_treetime.svg
+
+localrules: all, pastml_itol, fig
+#ruleorder: pastml_col > nex2nwk
+
+folder = os.path.abspath(config["folder"])
+data_dir = os.path.join(folder, 'data')
+
+types = ['raxmlng', 'iq']
+host = ['bats', 'skunks', 'dogs']
+
+os.makedirs('logs', exist_ok=True)
+
+rule all:
+    input:
+        os.path.join(data_dir, 'dates_treetime.csv'),
+        os.path.join(data_dir, 'dogs.treetime.with_outliers.nexus'),
+        os.path.join(data_dir, 'dogs.treetime.with_outliers.nwk'),
+        os.path.join(data_dir, 'dogs.treetime.nwk')
+
+rule extract_dates_treetime:
+    '''
+    Reformats metadata into date file readable by TreeTime.
+    '''
+    input:
+        tab = os.path.join(data_dir, 'ncbi_cleaned.tab'),
+    output:
+        tab = os.path.join(data_dir, 'dates_treetime.csv')
+    params:
+        mem = 1000,
+        name = 'dates',
+        date_col = 'collection_date',
+        qos = 'normal',
+    threads: 1
+    singularity: "docker://evolbioinfo/python-evol:v3.6"
+    shell:
+        """
+        python3 py/extract_dates_treetime.py --data {input.tab} --dates {output.tab} \
+        --date_col {params.date_col}
+        """
+
+rule date_treetime:
+    '''
+    Dates a tree with TreeTime.
+    '''
+    input:
+        tree = os.path.join(data_dir, 'raxmlng_tree_dogs.collapsed.nwk'),
+        dates = os.path.join(data_dir, 'dates_treetime.csv'),
+        length = os.path.join(data_dir, 'dogs.length'),
+    output:
+        tree = os.path.join(data_dir, 'dogs.treetime.with_outliers.nexus'),
+        dates = os.path.join(data_dir, 'dogs.treetime.dates'),
+        rates = os.path.join(data_dir, 'dogs.treetime.rates'),
+        log = os.path.join(data_dir, 'dogs.treetime.log'),
+        pdf = os.path.join(data_dir, 'dogs.treetime.rtt.pdf'),
+    threads: 12
+    singularity: "docker://evolbioinfo/treetime:v0.6.3"
+    params:
+        mem = 40000,
+        name = 'treetime_dogs',
+        wd = os.path.join(data_dir,  'dogs.treetime'),
+        qos = 'normal',
+    shell:
+        """
+        n=`head {input.length}`
+
+        treetime --tree {input.tree} --dates {input.dates} --sequence-length $n --reroot least-squares \
+        --confidence --covariation --branch-length-mode input --relax 1 0\
+        --plot-rtt rtt.pdf --outdir {params.wd} --verbose 0 --clock-filter 3 > {output.log}
+
+        cp {params.wd}/dates.tsv {output.dates}
+        cp {params.wd}/substitution_rates.tsv {output.rates}
+        cp {params.wd}/timetree.nexus {output.tree}
+        cp {params.wd}/rtt.pdf {output.pdf}
+
+        rm -rf {params.wd}
+        """
+
+rule nex2nwk:
+    '''
+    Converts a nexus tree to newick.
+    '''
+    input:
+        nexus = os.path.join(data_dir, 'dogs.treetime.with_outliers.nexus'),
+    output:
+        nwk = os.path.join(data_dir, 'dogs.treetime.with_outliers.nwk'),
+    singularity:
+        "docker://evolbioinfo/gotree:v0.3.0b"
+    params:
+        mem = 2000,
+        name = 'nex2nwk',
+        qos = 'normal',
+    threads: 1
+    shell:
+        """
+        gotree reformat newick -i {input.nexus} -f nexus -o {output.nwk}
+        sed -i -e 's/\\[[^]]*\\]//g' {output.nwk}
+        """
+
+
+rule rm_outliers_treetime:
+    '''
+    Removes TreeTime outliers from the dated tree.
+    '''
+    input:
+        tree = os.path.join(data_dir, 'dogs.treetime.with_outliers.nwk'),
+        ref_log = os.path.join(data_dir, 'dogs.treetime.log'),
+    output:
+        tree = os.path.join(data_dir, 'dogs.treetime.nwk')
+    params:
+        mem = 1000,
+        name = 'no_tt_dogs',
+        qos = 'normal',
+    threads: 1
+    singularity: "docker://evolbioinfo/python-evol:v3.6"
+    shell:
+        """
+        python3 py/rm_outliers_tt.py --in_tree {input.tree} --ref {input.ref_log} --out_tree {output.tree}
+        """
+

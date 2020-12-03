@@ -23,7 +23,8 @@ host species.
 
 #### Cleaning
 248 sequences without any corresponding metadata were removed from the fa file 
-by running [remove_sequences](snakemake/r/remove_sequences.R) R script. 
+by running [remove_sequences](snakemake/r/remove_sequences.R) R script. Additionally, six sequences determined to be
+laboratory strains of RABV were also removed (GQ412744, JN234411, KF154998, FJ959397, EF564174, HQ317918).
 
 ### MSA
 
@@ -57,8 +58,9 @@ snakemake --snakefile snakefile_phylogeny --keep-going --config folder=.. --use-
 The phylogeny was dated and rooted with LSD 2 [To *et al.*, 2015](https://academic.oup.com/sysbio/article/65/1/82/2461506) (with temporal outlier removal).
 The rootings were reviewed and any clade formations were observed against country of origin and virus host species.
 To identify the order and family of the host species, the R script [species_to_family.R](snakemake/r/species_to_family). Three
-distinct groups in the original tree were identified, and the tree was split into three different groups. These
-trees were then reconstructed, dated and rooted. 
+distinct groups in the original tree were identified, and the tree was split into three different groups by isolating 
+their accession numbers from the original global tree. The MSA alignment file was then 
+regrouped by the skunks and raccoons group, bats groups, and dogs group.
 
 
 #### DIY
@@ -66,3 +68,5 @@ To perform phylogeographic analysis, from the [snakemake](snakemake)folder, run 
 ```bash
 snakemake --snakefile snakefile_phylogeography --keep-going --config folder=.. --use-singularity --singularity-args "--home ~"
 ```
+
+### 4. Phylogeography

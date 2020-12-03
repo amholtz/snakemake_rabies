@@ -52,7 +52,7 @@ rule date_treetime:
     input:
         tree = os.path.join(data_dir, 'raxmlng_tree_dogs.collapsed.nwk'),
         dates = os.path.join(data_dir, 'dates_treetime.csv'),
-        length = os.path.join(data_dir, 'dogs.length'),
+        length = os.path.join(data_dir, 'aln.length'),
     output:
         tree = os.path.join(data_dir, 'dogs.treetime.with_outliers.nexus'),
         dates = os.path.join(data_dir, 'dogs.treetime.dates'),

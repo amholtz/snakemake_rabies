@@ -9,9 +9,9 @@ def date2years(d, default=None, default_min_date=1900, default_max_date=2018):
         days_in_this_year = first_jan_next_year - first_jan_this_year
         date = d.year + day_of_this_year / days_in_this_year
         max_date, min_date = date, date
-        if date == d.year:
-            max_date = d.year + (days_in_this_year.days - 1) / days_in_this_year.days
-            return None, date, max_date
+        #if date == d.year:
+            #max_date = d.year + (days_in_this_year.days - 1) / days_in_this_year.days
+            #return None, date, max_date
         # if d.day == 1:
         #     next_month_d = pd.datetime(year=d.year + (0 if d.month < 12 else 1), month=(d.month if d.month < 12 else 0) + 1, day=1)
         #     nm_day_of_this_year = (next_month_d - first_jan_this_year).days - 1

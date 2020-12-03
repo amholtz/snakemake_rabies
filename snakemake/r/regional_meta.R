@@ -49,35 +49,42 @@ canada$region <- str_replace(canada$region,"Yukon", "YT")
 canada$region <- str_replace(canada$region,"Nunavut", "NU")
 
 us <- dplyr::filter(ncbi, Country1 == "USA")
-us <- us %>% dplyr::select(Accession, Host, Collection_Date, USA)
 
-us <- rename(us, region = USA)
+#remove region 2, and if region 3 is empty, replace it with region 3
+us$region <- ifelse(is.na(us$Region2), us$Region1,
+                    ifelse(is.na(us$Region3), us$Region2, us$Region3))
+
+us <- us %>% dplyr::select(Accession, Host, Collection_Date, region)
+
+us$region <- str_replace(us$region,"Alabama", "AL")
+us$region <- str_replace(us$region,"Alaska", "AK")
+us$region <- str_replace(us$region,"New York", "NY")
+us$region <- str_replace(us$region,"Pennsylvania", "PA")
+
 
 ncbi_region <- bind_rows(us, canada)
 
 
 ncbi <- dplyr::select(ncbi, Accession, Country1)
 
-ncbi_region <- left_join(ncbi, ncbi_region, by = "Accession")
-
 ncbi_region <- ncbi_region %>% 
   rename(id = Accession) %>% 
-  rename(country = Country1) %>% 
   rename(host = Host) %>% 
   rename(collection_date = Collection_Date) 
 
-write.table(ncbi_region, sep = "\t",file = "US.CA_meta.tab")
+ncbi_region$region <- str_trim(ncbi_region$region)
 
 ### NOW TO PUT EVERYTHING TOGETHER
 
 #Reading the ncbi_cleaned meta data that exists in the Data on Volumes
 meta <- read.delim("/Volumes/@home/rabies/data/ncbi_cleaned.tab")
 
+meta <- select(meta, -region)
+
 #Lets remove everything in ncbi_region except id and region to make an easy join
 
 ncbi_region <- dplyr::select(ncbi_region, id, region)
 
 region <- left_join(meta, ncbi_region, by = "id")
-
 
 write.table(region, "/Volumes/@home/rabies/data/ncbi_cleaned.tab", sep="\t", row.names = FALSE)

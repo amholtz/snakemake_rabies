@@ -14,6 +14,8 @@ if '__main__' == __name__:
     parser.add_argument('--output_bats',  required=True, type=str)
     parser.add_argument('--output_skunks',  required=True, type=str)
     parser.add_argument('--output_dogs',  required=True, type=str)
+    parser.add_argument('--output_arctic_foxes', required=True, type=str)
+
     params = parser.parse_args()
 
     tree = read_tree(params.input_tree)
@@ -51,6 +53,17 @@ if '__main__' == __name__:
     #with open("dogs.txt", "w") as file:
     with open(params.output_dogs, "w") as file:
         for leaf in leaves_dogs:
+            file.write(leaf.name)
+            file.write('\n')
+
+    ancestor_arctic_foxes = tree.get_common_ancestor("KU198462", "MN233943")
+    # Get all tree leaves that are children to this node
+    leaves_arctic_foxes = ancestor_arctic_foxes.get_leaves()
+
+    # Save the tree leaves in a text file separate by new lines
+    # with open("arctic_foxes.txt", "w") as file:
+    with open(params.output_arctic_foxes, "w") as file:
+        for leaf in leaves_arctic_foxes:
             file.write(leaf.name)
             file.write('\n')
 

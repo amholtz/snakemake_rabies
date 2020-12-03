@@ -16,15 +16,16 @@ os.makedirs('logs', exist_ok=True)
 
 rule all:
     input:
-        os.path.join(data_dir, 'dates_lsd.tab'),
-        os.path.join(data_dir, 'iq_tree.ntips'),
-        os.path.join(data_dir, 'raxmlng_tree.ntips'),
+        #os.path.join(data_dir, 'dates_lsd.tab'),
+        #os.path.join(data_dir, 'iq_tree.ntips'),
+        #os.path.join(data_dir, 'raxmlng_tree.ntips'),
         #os.path.join(data_dir, 'iq_tree.root.lsd2.nexus'),
-        #os.path.join(data_dir, 'raxmlng_tree.root.lsd2.nexus'),
+        #os.path.join(data_dir, 'raxmlgn_tree.root.lsd2.nexus'),
         #os.path.join(data_dir, 'iTOL_colorstrip-species.txt'),
-        os.path.join(data_dir, 'bats_split.txt'),
-        os.path.join(data_dir, 'skunks_split.txt'),
-        os.path.join(data_dir, 'dogs_split.txt'),
+        #os.path.join(data_dir, 'bats_split.txt'),
+        #os.path.join(data_dir, 'skunks_split.txt'),
+        #os.path.join(data_dir, 'dogs_split.txt'),
+        os.path.join(data_dir, 'arctic_foxes_split.txt'),
 
 
 rule extract_dates_lsd:
@@ -133,16 +134,16 @@ rule raxmlng_date_lsd2:
         ntips = os.path.join(data_dir, 'raxmlng_tree.ntips'),
         dates = os.path.join(data_dir, 'dates_lsd.tab'),
     output:
-        tree = os.path.join(data_dir, 'raxmlng_tree.root.lsd2.nexus'),
-        log = os.path.join(data_dir, 'raxmlng_tree.root.lsd2.log'),
-        rd = os.path.join(data_dir, 'raxmlng_tree.root.lsd2.rootdate'),
-        outliers = os.path.join(data_dir, 'raxmlng_tree.outliers'),
+        tree = os.path.join(data_dir, 'raxmlgn_tree.root.lsd2.nexus'),
+        log = os.path.join(data_dir, 'raxmlgn_tree.root.lsd2.log'),
+        rd = os.path.join(data_dir, 'raxmlgn_tree.root.lsd2.rootdate'),
+        outliers = os.path.join(data_dir, 'raxmlgn_tree.outliers'),
     threads: 1
     singularity: "docker://evolbioinfo/lsd2:v1.6.5"
     params:
         mem = 4000,
         name = 'lsd2',
-        wd = os.path.join(data_dir, 'raxmlng_tree.root.lsd2'),
+        wd = os.path.join(data_dir, 'raxmlgn_tree.root.wd_lsd2'),
         qos = 'normal',
     shell:
         """
@@ -197,11 +198,12 @@ rule split_global_tree:
     Splits the global rabies tree construction into three separate groups by bat, skunk, and dog clade
     '''
     input:
-        tree = os.path.join(data_dir, 'iq_tree.root.lsd2.nwk'),
+        tree = os.path.join(data_dir, 'iq_tree_dated_rooted.nwk'),
     output:
         bats = os.path.join(data_dir, 'bats_split.txt'),
         skunks = os.path.join(data_dir, 'skunks_split.txt'),
         dogs = os.path.join(data_dir, 'dogs_split.txt'),
+        arctic_foxes = os.path.join(data_dir, 'arctic_foxes_split.txt'),
     singularity:
         "docker://evolbioinfo/python-evol:v3.6richer"
     params:
@@ -212,5 +214,5 @@ rule split_global_tree:
     shell:
         """
         python3 py/split_tree_parts.py --input_tree {input.tree} --output_bats {output.bats} \
-        --output_skunks {output.skunks} --output_dogs {output.dogs}
+        --output_skunks {output.skunks} --output_dogs {output.dogs} --output_arctic_foxes {output.arctic_foxes}
         """
